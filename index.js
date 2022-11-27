@@ -1,7 +1,7 @@
 const TelegramApi = require('node-telegram-bot-api')
 const mysql = require('mysql')
 const util = require('util');
-const {unauthorizedOptions, authorizedOptions, authorizationOptions} = require('./src/options');
+const {unauthorizedOptions, authorizedOptions, profileOptions, interestsOption, acquaintanceOptions, registerOptions, dealsOptions} = require('./src/options');
 
 const connection = mysql.createConnection({
     connectionLimit : 10,
@@ -29,8 +29,11 @@ const start = async () => {
         city_id: '',
         department_title: '',
         position_title: '',
+        chat_id: '',
         interests: {},
     };
+    let approachedUsers;
+    let approachedUser;
     let message_id;
     const departments = await query(`SELECT * FROM departments`);
     const positions = await query(`SELECT * FROM positions`);
@@ -71,42 +74,47 @@ const start = async () => {
     bot.setMyCommands([
         {command: '/start', description: 'Начальное действие'}
     ]);
-
     bot.on('message', async msg => {
-        const text = msg.text;
+        const msgText = msg.text;
         const chatId = msg.chat.id;
         const userTG = msg.from;
         const userId = userTG.id;
         message_id = msg.message_id;
 
-        if (text === '/start') {
-            const row = await query(`SELECT * FROM users WHERE telegram_id = ${userId}`);
+        const row = await query(`SELECT * FROM users WHERE telegram_id = ${userId}`);
+
+        const userFromDb = row[0];
+        user.id = userFromDb.id;
+
+        user.name = userFromDb.name;
+        user.age = userFromDb.age;
+        user.telegram_id = userId;
+        user.telegram_username = userTG.username;
+        user.position_id = userFromDb.position_id;
+        user.description = userFromDb.description;
+        user.city_id = userFromDb.city_id;
+        const city = await query(`SELECT * FROM cities WHERE id = ${user.city_id}`);
+        user.city_name = city[0].title;
+
+        const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
+        user.interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
+        user.department_id = departmentRow[0].id;
+        user.department_title = departmentRow[0].department_title;
+        user.position_title = departmentRow[0].position_title;
+
+        if (msgText === '/start') {
             let text = '';
             let options;
             if (row.length > 0) {
-
-                const userFromDb = row[0];
-                user.id = userFromDb.name;
-
-                user.name = userFromDb.name;
-                user.age = userFromDb.age;
-                user.telegram_id = userId;
-                user.telegram_username = userTG.username;
-                user.position_id = userFromDb.position_id;
-                user.decription = userFromDb.decription;
-                user.city_id = userFromDb.city_id;
-
-                const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
-                user.department_id = departmentRow[0].id;
-                user.department_title = departmentRow[0].department_title;
-                user.position_title = departmentRow[0].position_title;
-
-                text = `Привет, ${user.name}`
+                text = `${user.name}, привет! 👋 \n\n` +
+                       `Гринатом снова приветствует тебя!`
                 options = authorizedOptions;
             } else {
-                text = `Вы здесь впервые!`;
+                text = `Вы здесь впервые! Добро пожаловать в Гринатом! \n \n` +
+                       `Этот бот создан для упрощения вашей работы в новом коллективе`;
                 options = unauthorizedOptions;
             }
+
 
             return await bot.sendMessage(chatId, text, options);
         }
@@ -115,6 +123,34 @@ const start = async () => {
     bot.on('callback_query', async msg => {
         const data = msg.data;
         const chatId = msg.message.chat.id;
+        const userTG = msg.from;
+        const userId = userTG.id;
+
+        const row = await query(`SELECT * FROM users WHERE telegram_id = ${userId}`);
+
+        const userFromDb = row[0];
+        user.id = userFromDb.id;
+
+        user.name = userFromDb.name;
+        user.age = userFromDb.age;
+        user.telegram_id = userId;
+        user.telegram_username = userTG.username;
+        user.position_id = userFromDb.position_id;
+        user.description = userFromDb.description;
+        user.city_id = userFromDb.city_id;
+        const city = await query(`SELECT * FROM cities WHERE id = ${user.city_id}`);
+        user.city_name = city[0].title;
+
+        const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
+        user.interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
+        user.department_id = departmentRow[0].id;
+        user.department_title = departmentRow[0].department_title;
+        user.position_title = departmentRow[0].position_title;
+
+        if (data === '/landing') {
+            const text = `${user.name}, привет! 👋`
+            return await bot.sendMessage(chatId, text, authorizedOptions);
+        }
 
         if (data === '/signup') {
             const selectDepartments = {
@@ -239,6 +275,7 @@ const start = async () => {
                                 user.description = descriptionMsg.text;
                                 const userId = descriptionMsg.from.id;
                                 const username = descriptionMsg.from.username;
+                                console.log(user.position_id);
 
                                 await query(`INSERT INTO users (name, age, telegram_id, telegram_username, involvement_count, description, position_id, city_id)
                                 VALUES('${user.name}', '${user.age}', '${userId}', '${username}', 1, '${user.description}', '${user.position_id}', '${user.city_id}')
@@ -248,13 +285,15 @@ const start = async () => {
                                 const userIdDB = userDB.reduce(u => u.id).id
 
                                 const interestsResult = await query(`
-                                INSERT INTO interests (title, favorite, user_id)
-                                VALUES
-                                    ('music', '${interests.find(i => i.enum === "music").favorite}', ${userIdDB}),
-                                    ('films', '${interests.find(i => i.enum === "films").favorite}', ${userIdDB}),
-                                    ('books', '${interests.find(i => i.enum === "books").favorite}', ${userIdDB}),
-                                    ('video_games', '${interests.find(i => i.enum === "video_games").favorite}', ${userIdDB})`);
-                            })
+                                    INSERT INTO interests (title, favorite, user_id)
+                                    VALUES
+                                        ('music', '${interests.find(i => i.enum === "music").favorite}', ${userIdDB}),
+                                        ('films', '${interests.find(i => i.enum === "films").favorite}', ${userIdDB}),
+                                        ('books', '${interests.find(i => i.enum === "books").favorite}', ${userIdDB}),
+                                        ('video_games', '${interests.find(i => i.enum === "video_games").favorite}', ${userIdDB})`);
+
+                                await bot.sendMessage(chatId, 'Вы успешно зарегистрировались!', registerOptions)
+                            });
                         });
                     });
                 });
@@ -278,13 +317,234 @@ const start = async () => {
         }
 
         if (data === '/profile') {
-            console.log(user)
-            let text = 'Имя: ' + user.name + '\n' +
-                       'Возраст: ' + user.age + '\n \n' +
-                       'Отдел: ' + user.department_title + '\n' +
-                       'Должность: ' + user.position_title + '\n \n' +
-                       'О себе: ' + user.description
-            await bot.sendMessage(chatId, text);
+            let text = '👤 *Имя*: ' + user.name + '\n' +
+                       '🔞 *Возраст*: ' + user.age + '\n \n' +
+                       '🌆 *Город*: ' + user.city_name + '\n' +
+                       '🏢 *Отдел*: ' + user.department_title + '\n' +
+                       '👷 *Должность*: ' + user.position_title + '\n \n' +
+                       '📖 *О себе*: _' + user.description + '_'
+            await bot.sendMessage(chatId, text, profileOptions);
+        }
+
+        if (data === '/interests') {
+            const interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
+
+            let text = '🎙️ Музыка: ' + interests.find(e => e.title === 'music').favorite + '\n \n' +
+                   '🎬 Фильмы: ' + interests.find(e => e.title === 'films').favorite + '\n \n' +
+                   '📚 Книги: ' + interests.find(e => e.title === 'books').favorite + '\n \n' +
+                   '🎮 Видеоигры: ' + interests.find(e => e.title === 'video_games').favorite
+            ;
+
+            bot.sendMessage(chatId, text, interestsOption);
+        }
+
+        if (data === '/acquaintances') {
+            const users = await query(`SELECT * FROM users WHERE id != ${user.id}`);
+            for (const u of users) {
+               const rate = await query(`SELECT Avg(rate) AS rating FROM rates WHERE user_id = ${u.id}`);
+               const interests = await query(`SELECT title, favorite FROM interests WHERE user_id = ${u.id}`);
+               u.approached = 0;
+               u.common = {
+                   title: '',
+                   length: 0,
+                   city: false,
+               };
+               u.interests = interests;
+               u.rate = rate[0].rating;
+
+               if (u.rate < 3) {
+                   u.approached -= 1;
+               }
+               if (u.rate > 3) {
+                   u.approached += 1;
+               }
+               if (u.city_id === user.city_id) {
+                   u.common.city = true;
+                   u.approached += 2;
+               }
+
+               for (const i of u.interests) {
+                   for (const mainI of user.interests) {
+                       if (i.title === mainI.title) {
+                           let mainInterests = mainI.favorite.split(',').map(i => i.trim());
+                           let foreignInterests = i.favorite.split(',').map(i => i.trim());
+                           var common = mainInterests.filter(x => foreignInterests.indexOf(x) !== -1);
+                           if (common.length > 0) {
+                               u.approached += common.length;
+                               if (common.length > u.common.length) {
+                                   u.common.title = i.title;
+                                   u.common.approached = common.length
+                               }
+                           }
+                       }
+                   }
+               }
+            }
+            approachedUser = users.sort((a,b) => (a.approached > b.approached) ? -1 : ((b.approached > a.approached) ? 1 : 0))
+                .shift();
+
+            approachedUsers = users;
+
+            let text = '🎉 *Мы нашли его!* 🎉 \n \n' +
+                       '👤 *Имя*: ' + approachedUser.name + '\n' +
+                       '🔞 *Возраст*: ' + approachedUser.age + '\n \n' +
+                       '💌 *Телега*: @' + approachedUser.telegram_username + '\n \n' +
+                       '📊 _Подходит вам на ' + approachedUser.approached * 10 + ' %_ \n' +
+                       '🎯 _Больше всего вы сошлись на ' + approachedUser.common.title.charAt(0).toUpperCase() + approachedUser.common.title.slice(1) + '_'
+            ;
+
+            if (approachedUser.common.city) text += '\n\n 🌆 *Живёт с вами в одном городе*';
+
+            bot.sendMessage(chatId, text, acquaintanceOptions);
+        }
+
+        if (data === '/nextAcquaintances') {
+            if (approachedUsers.length === 0) {
+                return bot.sendMessage(chatId, 'Вы просмотрели всех пользователей!', profileOptions)
+            }
+            approachedUser = approachedUsers.sort((a,b) => (a.approached > b.approached) ? -1 : ((b.approached > a.approached) ? 1 : 0))
+            .shift();
+
+            let text = '🎉 *Мы нашли его!* 🎉 \n \n' +
+                '👤 *Имя*: ' + approachedUser.name + '\n' +
+                '🔞 *Возраст*: ' + approachedUser.age + '\n \n' +
+                '💌 *Телега*: @' + approachedUser.telegram_username + '\n \n' +
+                '📊 _Подходит вам на ' + approachedUser.approached * 10 + ' %_ \n' +
+                '🎯 _Больше всего вы сошлись на ' + approachedUser.common.title.charAt(0).toUpperCase() + approachedUser.common.title.slice(1).replace('_', ' ')+ '_'
+            ;
+
+            if (approachedUser.common.city) text += '\n\n 🌆 *Живёт с вами в одном городе*';
+
+            bot.sendMessage(chatId, text, acquaintanceOptions);
+        }
+
+        if (data === '/deal') {
+            let text = '🗓️ Когда вам удобно встретиться? \n \n (Введите количество дней в течение которых может состяться встреча)';
+            const datePrompt = await bot.sendMessage(chatId, text, {
+                reply_markup: {
+                    force_reply: true,
+                }
+            });
+
+            bot.onReplyToMessage(chatId, datePrompt.message_id, async (dateMsg) => {
+                const date = dateMsg.text;
+
+                const inviteOptions = {
+                    reply_markup: JSON.stringify({
+                        inline_keyboard: [
+                            [{text: 'Согласиться на встречу в онлайн формате', callback_data: '/dealConfirm'+approachedUser.telegram_id+'_'+chatId+'_'+date+'_'+1}],
+                            [{text: 'Согласиться на встречу в оффлайн формате', callback_data: '/dealConfirm'+approachedUser.telegram_id+'_'+chatId+'_'+date+'_'+1}],
+                            [{text: 'Назначить другое время', callback_data: '/dealConfirm'}, {text: 'Отклонить', callback_data: '/nextAcquaintances'}],
+                        ]
+                    }),
+                    parse_mode: 'markdown'
+                };
+
+
+                let text = 'Вам прислали приглашение на встречу! \n \n' +
+                           `${user.name} предлагает вам встретиться в течении ${date} дней`;
+                const msg = await bot.sendMessage(approachedUser.telegram_id, text, inviteOptions);
+
+                let demandText = 'Приглашение отправлено! Ждём ответа от пользователя.';
+                await bot.sendMessage(chatId, demandText);
+            });
+        }
+
+        if (data.includes('/dealConfirm')) {
+            const str = data.split('_');
+            const demand_user_id = Number(str[0].match(/\d+/)[0]);
+            const offer_user_id = Number(str[1]);
+            const date = Number(str[2]);
+            const offline = str[3] !== undefined;
+
+            const demand_user_query = await query(`SELECT * FROM users WHERE telegram_id = ${demand_user_id}`);
+            const offer_user_query = await query(`SELECT * FROM users WHERE telegram_id = ${offer_user_id}`);
+
+            const demand_user = demand_user_query[0];
+            const offer_user = offer_user_query[0];
+
+            let demandText = `Вы согласовали встречу с пользователем ${offer_user.name} \n \n` +
+                              `Она должна пройти в течение ${date} дней`;
+            let offerText = `Вы согласовали встречу с пользователем ${demand_user.name} \n \n` +
+                            `Она должна пройти в течение ${date} дней`;
+
+            await query(`INSERT INTO deals(date, demand_user_id, offer_user_id) VALUES(${date}, ${demand_user_id}, ${offer_user_id})`);
+
+            await bot.sendMessage(demand_user_id, demandText);
+            await bot.sendMessage(offer_user_id, offerText);
+        }
+
+        if (data === '/deals') {
+            let text = '👥 *Ваши встречи* \n'
+
+            await bot.sendMessage(chatId, text, dealsOptions);
+        }
+
+        if (data === '/dealsActive') {
+            let text = 'Активные встречи';
+            const deals = await query(`SELECT * FROM deals WHERE demand_user_id = ${chatId} OR offer_user_id = ${chatId} AND active = 1`);
+
+            const activeDealsOptions = {
+                reply_markup: JSON.stringify({
+                    inline_keyboard:
+                    deals.map((d, i) => {
+                        let userId;
+                        if (d.offer_user_id !== chatId) userId = d.offer_user_id;
+                        if (d.demand_user_id !== chatId) userId = d.demand_user_id;
+
+                        return [{text: 'Встреча ' + d.id, callback_data: String('/dealActive'+d.id+'_'+userId)}];
+                    }).filter(d => d !== undefined)
+                }),
+                parse_mode: 'markdown'
+            }
+
+            await bot.sendMessage(chatId, 'Активные встречи', activeDealsOptions);
+        }
+
+        if (data.includes('/dealActive')) {
+            const str = data.split('_');
+            const deal_id = Number(str[0].match(/\d+/)[0]);
+            const user_id = Number(str[1]);
+
+            const userQuery = await query(`SELECT * FROM users WHERE telegram_id = ${user_id}`)
+            const user = userQuery[0];
+
+            let text = `Встреча с пользователем ${user.name}`
+
+            const activeDealOption = {
+                reply_markup: JSON.stringify({
+                    inline_keyboard: [
+                        [{text: 'Назад', callback_data: '/landing'}, {text: 'Встреча состоялась', callback_data: '/dealComplete' + deal_id + '_' + user_id}],
+                    ]
+                }),
+                parse_mode: 'markdown'
+            }
+
+            bot.sendMessage(chatId, text, activeDealOption);
+        }
+
+        if (data.includes('/dealComplete')) {
+            const str = data.split('_');
+            const deal_id = Number(str[0].match(/\d+/)[0]);
+            const user_id = Number(str[1].match(/\d+/)[0]);
+
+            await query(`UPDATE deals SET active = 0 WHERE id = ${deal_id}`);
+
+            let text = 'Встреча успешно завершена! Оцените её от 0 до 5';
+
+            const ratePrompt = await bot.sendMessage(chatId, text, {
+                reply_markup: {
+                    force_reply: true,
+                }
+            });
+
+            bot.onReplyToMessage(chatId, ratePrompt.message_id, async (rateMsg) => {
+                const rate = Number(rateMsg.text);
+
+                await query(`INSERT INTO rates(rate, user_id) VALUES(${rate}, ${user_id})`);
+
+                await bot.sendMessage(chatId, 'Вы оценили встречу с сотрудником', interestsOption);
+            })
         }
     });
 }
