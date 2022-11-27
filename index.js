@@ -152,7 +152,8 @@ const start = async () => {
         }
 
         if (data === '/landing') {
-            const text = `${user.name}, привет! 👋`
+            const text = `${user.name}, привет! 👋 \n\n` +
+                         `Гринатом снова приветствует тебя!`
             return await bot.sendMessage(chatId, text, authorizedOptions);
         }
 
@@ -321,12 +322,12 @@ const start = async () => {
         }
 
         if (data === '/profile') {
-            let text = '👤 *Имя*: ' + user.name + '\n' +
-                       '🔞 *Возраст*: ' + user.age + '\n \n' +
-                       '🌆 *Город*: ' + user.city_name + '\n' +
-                       '🏢 *Отдел*: ' + user.department_title + '\n' +
-                       '👷 *Должность*: ' + user.position_title + '\n \n' +
-                       '📖 *О себе*: _' + user.description + '_'
+            let text = '👤 <strong>Имя</strong>: ' + user.name + '\n' +
+                       '🔞 <strong>Возраст</strong>: ' + user.age + '\n \n' +
+                       '🌆 <strong>Город</strong>: ' + user.city_name + '\n' +
+                       '🏢 <strong>Отдел</strong>: ' + user.department_title + '\n' +
+                       '👷 <strong>Должность</strong>: ' + user.position_title + '\n \n' +
+                       '📖 <strong>О себе</strong>: <i>' + user.description + '</i>>'
             await bot.sendMessage(chatId, text, profileOptions);
         }
 
@@ -383,21 +384,22 @@ const start = async () => {
                        }
                    }
                }
+                u.approached = Math.abs(u.approached);
             }
             approachedUser = users.sort((a,b) => (a.approached > b.approached) ? -1 : ((b.approached > a.approached) ? 1 : 0))
                 .shift();
 
             approachedUsers = users;
 
-            let text = '🎉 *Мы нашли его!* 🎉 \n \n' +
-                       '👤 *Имя*: ' + approachedUser.name + '\n' +
-                       '🔞 *Возраст*: ' + approachedUser.age + '\n \n' +
-                       '💌 *Телега*: @' + approachedUser.telegram_username + '\n \n' +
-                       '📊 _Подходит вам на ' + approachedUser.approached * 10 + ' %_ \n' +
-                       '🎯 _Больше всего вы сошлись на ' + approachedUser.common.title.charAt(0).toUpperCase() + approachedUser.common.title.slice(1) + '_'
+            let text = '🎉 <strong>Мы нашли его!</strong> 🎉 \n \n' +
+                       '👤 <strong>Имя</strong>: ' + approachedUser.name + '\n' +
+                       '🔞 <strong>Возраст</strong>: ' + approachedUser.age + '\n \n' +
+                       '💌 <strong>Телега</strong>: @' + approachedUser.telegram_username + '\n \n' +
+                       '📊 <i>Подходит вам на ' + approachedUser.approached * 10 + ' %</i> \n' +
+                       '🎯 <i>Больше всего вы сошлись на ' + approachedUser.common.title.charAt(0).toUpperCase() + approachedUser.common.title.slice(1) + '</i>'
             ;
 
-            if (approachedUser.common.city) text += '\n\n 🌆 *Живёт с вами в одном городе*';
+            if (approachedUser.common.city) text += '\n\n 🌆 <strong>Живёт с вами в одном городе</strong>';
 
             bot.sendMessage(chatId, text, acquaintanceOptions);
         }
@@ -409,15 +411,15 @@ const start = async () => {
             approachedUser = approachedUsers.sort((a,b) => (a.approached > b.approached) ? -1 : ((b.approached > a.approached) ? 1 : 0))
             .shift();
 
-            let text = '🎉 *Мы нашли его!* 🎉 \n \n' +
-                '👤 *Имя*: ' + approachedUser.name + '\n' +
-                '🔞 *Возраст*: ' + approachedUser.age + '\n \n' +
-                '💌 *Телега*: @' + approachedUser.telegram_username + '\n \n' +
-                '📊 _Подходит вам на ' + approachedUser.approached * 10 + ' %_ \n' +
-                '🎯 _Больше всего вы сошлись на ' + approachedUser.common.title.charAt(0).toUpperCase() + approachedUser.common.title.slice(1).replace('_', ' ')+ '_'
+            let text = '🎉 <strong>Мы нашли его!</strong> 🎉 \n \n' +
+                '👤 <strong>Имя</strong>: ' + approachedUser.name + '\n' +
+                '🔞 <strong>Возраст</strong>: ' + approachedUser.age + '\n \n' +
+                '💌 <i>Телега</i>: @' + approachedUser.telegram_username + '\n \n' +
+                '📊 <i>Подходит вам по интересам на' + approachedUser.approached * 10 + ' % </i> \n' +
+                '🎯 <i>Больше всего вы сошлись на ' + approachedUser.common.title.charAt(0).toUpperCase() + approachedUser.common.title.slice(1).replace('_', ' ') + '</i>'
             ;
 
-            if (approachedUser.common.city) text += '\n\n 🌆 *Живёт с вами в одном городе*';
+            if (approachedUser.common.city) text += '\n\n 🌆 <strong>Живёт с вами в одном городе</strong>';
 
             bot.sendMessage(chatId, text, acquaintanceOptions);
         }
@@ -441,7 +443,7 @@ const start = async () => {
                             [{text: 'Назначить другое время', callback_data: '/dealConfirm'}, {text: 'Отклонить', callback_data: '/nextAcquaintances'}],
                         ]
                     }),
-                    parse_mode: 'markdown'
+                    parse_mode: 'html'
                 };
 
 
@@ -450,7 +452,7 @@ const start = async () => {
                 const msg = await bot.sendMessage(approachedUser.telegram_id, text, inviteOptions);
 
                 let demandText = 'Приглашение отправлено! Ждём ответа от пользователя.';
-                await bot.sendMessage(chatId, demandText);
+                await bot.sendMessage(chatId, demandText, authorizedOptions);
             });
         }
 
@@ -479,7 +481,7 @@ const start = async () => {
         }
 
         if (data === '/deals') {
-            let text = '👥 *Ваши встречи* \n'
+            let text = '👥 <strong>Ваши встречи</strong> \n'
 
             await bot.sendMessage(chatId, text, dealsOptions);
         }
@@ -499,7 +501,7 @@ const start = async () => {
                         return [{text: 'Встреча ' + d.id, callback_data: String('/dealActive'+d.id+'_'+userId)}];
                     }).filter(d => d !== undefined)
                 }),
-                parse_mode: 'markdown'
+                parse_mode: 'html'
             }
 
             await bot.sendMessage(chatId, 'Активные встречи', activeDealsOptions);
@@ -521,7 +523,7 @@ const start = async () => {
                         [{text: 'Назад', callback_data: '/landing'}, {text: 'Встреча состоялась', callback_data: '/dealComplete' + deal_id + '_' + user_id}],
                     ]
                 }),
-                parse_mode: 'markdown'
+                parse_mode: 'html'
             }
 
             bot.sendMessage(chatId, text, activeDealOption);

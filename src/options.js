@@ -32,14 +32,14 @@ module.exports = {
                 [{text: 'Назад', callback_data: '/landing'}],
             ]
         }),
-        parse_mode: 'markdown',
+        parse_mode: 'html',
     },
 
         interestsOption: {
         reply_markup: JSON.stringify({
             inline_keyboard: [
                 [{text: 'Поиск нового знакомого среди сотрудников', callback_data: '/acquaintances'}],
-                [{text: 'Назад', callback_data: '/landing'}],
+                [{text: 'Назад', callback_data: '/profile'}],
             ]
         })
     },
@@ -51,7 +51,7 @@ module.exports = {
                 [{text: 'Назад', callback_data: '/landing'}],
             ]
         }),
-        parse_mode: 'markdown'
+        parse_mode: 'html'
     },
 
     dealsOptions: {
@@ -62,6 +62,6 @@ module.exports = {
                 [{text: 'Назад', callback_data: '/landing'}],
             ]
         }),
-        parse_mode: 'markdown'
+        parse_mode: 'html'
     },
 }
