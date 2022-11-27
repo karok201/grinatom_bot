@@ -84,23 +84,25 @@ const start = async () => {
         const row = await query(`SELECT * FROM users WHERE telegram_id = ${userId}`);
 
         const userFromDb = row[0];
-        user.id = userFromDb.id;
+        if (userFromDb !== undefined) {
+            user.id = userFromDb.id;
 
-        user.name = userFromDb.name;
-        user.age = userFromDb.age;
-        user.telegram_id = userId;
-        user.telegram_username = userTG.username;
-        user.position_id = userFromDb.position_id;
-        user.description = userFromDb.description;
-        user.city_id = userFromDb.city_id;
-        const city = await query(`SELECT * FROM cities WHERE id = ${user.city_id}`);
-        user.city_name = city[0].title;
+            user.name = userFromDb.name;
+            user.age = userFromDb.age;
+            user.telegram_id = userId;
+            user.telegram_username = userTG.username;
+            user.position_id = userFromDb.position_id;
+            user.description = userFromDb.description;
+            user.city_id = userFromDb.city_id;
+            const city = await query(`SELECT * FROM cities WHERE id = ${user.city_id}`);
+            user.city_name = city[0].title;
 
-        const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
-        user.interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
-        user.department_id = departmentRow[0].id;
-        user.department_title = departmentRow[0].department_title;
-        user.position_title = departmentRow[0].position_title;
+            const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
+            user.interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
+            user.department_id = departmentRow[0].id;
+            user.department_title = departmentRow[0].department_title;
+            user.position_title = departmentRow[0].position_title;
+        }
 
         if (msgText === '/start') {
             let text = '';
@@ -129,23 +131,25 @@ const start = async () => {
         const row = await query(`SELECT * FROM users WHERE telegram_id = ${userId}`);
 
         const userFromDb = row[0];
-        user.id = userFromDb.id;
+        if (userFromDb !== undefined) {
+            user.id = userFromDb.id;
 
-        user.name = userFromDb.name;
-        user.age = userFromDb.age;
-        user.telegram_id = userId;
-        user.telegram_username = userTG.username;
-        user.position_id = userFromDb.position_id;
-        user.description = userFromDb.description;
-        user.city_id = userFromDb.city_id;
-        const city = await query(`SELECT * FROM cities WHERE id = ${user.city_id}`);
-        user.city_name = city[0].title;
+            user.name = userFromDb.name;
+            user.age = userFromDb.age;
+            user.telegram_id = userId;
+            user.telegram_username = userTG.username;
+            user.position_id = userFromDb.position_id;
+            user.description = userFromDb.description;
+            user.city_id = userFromDb.city_id;
+            const city = await query(`SELECT * FROM cities WHERE id = ${user.city_id}`);
+            user.city_name = city[0].title;
 
-        const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
-        user.interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
-        user.department_id = departmentRow[0].id;
-        user.department_title = departmentRow[0].department_title;
-        user.position_title = departmentRow[0].position_title;
+            const departmentRow = await query(`SELECT d.id, d.title as department_title, p.title as position_title FROM departments d JOIN positions p ON p.department_id = d.id WHERE p.id = ${user.position_id}`);
+            user.interests = await query(`SELECT * FROM interests WHERE user_id = ${user.id}`);
+            user.department_id = departmentRow[0].id;
+            user.department_title = departmentRow[0].department_title;
+            user.position_title = departmentRow[0].position_title;
+        }
 
         if (data === '/landing') {
             const text = `${user.name}, привет! 👋`
@@ -470,8 +474,8 @@ const start = async () => {
 
             await query(`INSERT INTO deals(date, demand_user_id, offer_user_id) VALUES(${date}, ${demand_user_id}, ${offer_user_id})`);
 
-            await bot.sendMessage(demand_user_id, demandText);
-            await bot.sendMessage(offer_user_id, offerText);
+            await bot.sendMessage(demand_user_id, demandText, authorizedOptions);
+            await bot.sendMessage(offer_user_id, offerText, authorizedOptions);
         }
 
         if (data === '/deals') {
